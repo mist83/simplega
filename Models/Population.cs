@@ -5,8 +5,10 @@ using System.Linq;
 
 namespace Pointillism.Models
 {
-    public class Population : List<Individual>
+    public class Population
     {
+        public List<Individual> Individuals { get; } = new List<Individual>();
+
         int size;
 
         public Population(int size)
@@ -16,14 +18,14 @@ namespace Pointillism.Models
             for (var i = 0; i < size; i++)
             {
                 var individual = new Individual(1000, Enumerable.Repeat(1, 1000).Select(x => Chromosome.Random()).ToArray());
-                Add(individual);
+                Individuals.Add(individual);
             }
         }
 
         private Population(params Individual[] individuals)
         {
             size = individuals.Length;
-            AddRange(individuals);
+            Individuals.AddRange(individuals);
         }
 
         public void Save()
@@ -31,10 +33,10 @@ namespace Pointillism.Models
             var generationDirectory = Path.Combine(Utility.SaveDirectory, $"Generation_{Utility.Generation:D6}");
             Directory.CreateDirectory(generationDirectory);
 
-            for (var i = 0; i < Count; i++)
+            for (var i = 0; i < Individuals.Count; i++)
             {
                 var lines = new List<string>();
-                foreach (var chromosome in this[i].Chromosomes)
+                foreach (var chromosome in Individuals[i].Chromosomes)
                 {
                     lines.Add($"{chromosome.X},{chromosome.Y},{chromosome.Radius},{chromosome.Color}");
                 }
@@ -50,16 +52,22 @@ namespace Pointillism.Models
         private Population Rank()
         {
             // ones closest to 0 are the most "fit"
-            var scored = this.OrderBy(x => Math.Abs(x.Fitness)).ToArray();
+            var scored = Individuals.OrderBy(x => Math.Abs(x.Fitness)).ToArray();
             return new Population(scored);
         }
 
         public Population Breed()
         {
-            var ranked = Rank().Take((int)(0.8 * size)).ToList(); // bottom % of population "die"
-            Console.WriteLine($"{Utility.Generation.ToString().PadRight(6)}Best/Worst/Total/Average: {Math.Abs(ranked[0].Fitness).ToString().PadLeft(15)}{Math.Abs(ranked[ranked.Count - 1].Fitness).ToString().PadLeft(15)}{ranked.Sum(x => Math.Abs((long)x.Fitness)).ToString().PadLeft(15)}{((long)ranked.Average(x => Math.Abs((long)x.Fitness))).ToString().PadLeft(15)}");
+            var ranked = Rank().Individuals.Take((int)(0.8 * size)).ToList(); // bottom % of population "die"
+
+            var best = Math.Abs(ranked[0].Fitness);
+            var worst = Math.Abs(ranked[ranked.Count - 1].Fitness);
+            var total = ranked.Sum(x => Math.Abs((long)x.Fitness));
+            var average = ((long)ranked.Average(x => Math.Abs((long)x.Fitness)));
+
+            Console.WriteLine($"{Utility.Generation.ToString().PadRight(6)}Best/Worst/Total/Average: {best.ToString().PadLeft(15)}{worst.ToString().PadLeft(15)}{total.ToString().PadLeft(15)}{average.ToString().PadLeft(15)}");
             var nextGeneration = new List<Individual>();
-            while (nextGeneration.Count < Count)
+            while (nextGeneration.Count < Individuals.Count)
             {
                 var mom = ranked[Utility.Random.Next(ranked.Count)];
                 var pop = ranked[Utility.Random.Next(ranked.Count)];

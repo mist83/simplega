@@ -58,7 +58,7 @@ namespace Pointillism
             Title = $"Gen {Utility.Generation}: {currentIndividual}";
 
             // time for the next generation
-            if (currentIndividual >= population.Count)
+            if (currentIndividual >= population.Individuals.Count)
             {
                 population.Save();
 
@@ -70,8 +70,9 @@ namespace Pointillism
                 return;
             }
 
-            Redraw(population[currentIndividual]);
-            population[currentIndividual].Score();
+            var individual = population.Individuals[currentIndividual];
+            Redraw(individual);
+            individual.Score();
 
             currentIndividual++;
         }
