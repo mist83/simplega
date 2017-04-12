@@ -11,13 +11,14 @@ using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 using System.Windows.Threading;
 using Pointillism.Models;
+using System.Drawing;
 
 namespace Pointillism
 {
     /// <summary>
     /// Interaction logic for MainWindow.xaml
     /// </summary>
-    public partial class MainWindow : Window
+    public partial class MainWindow
     {
         private Population population;
         private int currentIndividual = 0;
@@ -26,13 +27,14 @@ namespace Pointillism
         {
             InitializeComponent();
 
+            Original.Source = new BitmapImage(new Uri(@"Z:\Users\Michael\Documents\Visual Studio 2015\Projects\Pointillism\Pointillism\images\TestImage.png"));
             Utility.Canvas = MyCanvas;
 
             Loaded += MainWindow_Loaded;
             MouseDown += MainWindow_MouseDown;
 
             var timer = new DispatcherTimer();
-            timer.Interval = TimeSpan.FromMilliseconds(50);
+            timer.Interval = TimeSpan.FromMilliseconds(1);
             timer.Tick += DispatcherTimer_Tick;
             timer.Start();
         }
@@ -50,12 +52,14 @@ namespace Pointillism
 
         private void DispatcherTimer_Tick(object sender, EventArgs e)
         {
+            Target.Source = new BitmapImage(new Uri(Utility.Original));
+
             RedrawFunction();
         }
 
         private void RedrawFunction()
         {
-            Title = $"Gen {Utility.Generation}: {currentIndividual}";
+            Title = $"Generation {Utility.Generation}: Individual {currentIndividual}";
 
             // time for the next generation
             if (currentIndividual >= population.Individuals.Count)
@@ -63,7 +67,6 @@ namespace Pointillism
                 population.Save();
 
                 // breed the next generation
-                // TODO: HAVE TO INTRODUCE MUTATION!!! OTHERWISE WE WILL HIT A MAX AND HAVE TO STOP
                 currentIndividual = 0;
                 population = population.Breed();
                 Utility.Generation++;
@@ -77,45 +80,98 @@ namespace Pointillism
             currentIndividual++;
         }
 
+        Bitmap b = new Bitmap(32, 32);
+        private static Graphics graphics;
+
         private void Redraw(Individual individual)
         {
-            MyCanvas.Children.Clear();
-
-            foreach (var chromosome in individual.Chromosomes)
-            {
-                var ellipse = new Ellipse { Width = chromosome.Radius, Height = chromosome.Radius, Fill = new SolidColorBrush(chromosome.Color), Opacity = chromosome.Opacity };
-                Canvas.SetLeft(ellipse, chromosome.X - chromosome.Radius / 2);
-                Canvas.SetTop(ellipse, chromosome.Y - chromosome.Radius / 2);
-
-                MyCanvas.Children.Add(ellipse);
-            }
+            RedrawToBitmap(individual);
         }
 
-        private Chromosome[] Redraw1()
-        {
-            var chromosomes = new Chromosome[1000];
+        public static Bitmap RedrawToBitmap(Individual individual)
+        { 
+            //if (graphics == null)
+            //    graphics = Graphics.FromImage(b);
 
-            MyCanvas.Children.Clear();
-            MyCanvas.Background = Brushes.Black;
+            System.Drawing.Color[,] matrix = new System.Drawing.Color[32, 32];
+            individual.GrayScales = matrix;
 
-            for (var i = 0; i < chromosomes.Length; i++)
+            //graphics.FillRectangle(System.Drawing.Brushes.White, new System.Drawing.RectangleF(0, 0, b.Width, b.Height));
+
+            //MyCanvas.Children.Clear();
+            foreach (var chromosome in individual.Chromosomes)
             {
-                var p = Chromosome.Random();
+                //var ellipse = new Ellipse { Width = chromosome.Radius, Height = chromosome.Radius, Fill = new SolidColorBrush(chromosome.Color) };
+                //Canvas.SetLeft(ellipse, chromosome.X - chromosome.Radius / 2);
+                //Canvas.SetTop(ellipse, chromosome.Y - chromosome.Radius / 2);
 
-                //var size = r.Next(5, 30);
-                //size = 20;
-                //var color = colors[r.Next(colors.Length)];
-                //var opacity = r.Next(101) / 100.0;
-                var ellipse = new Ellipse { Width = p.Radius, Height = p.Radius, Fill = new SolidColorBrush(p.Color), Opacity = p.Opacity };
-                Canvas.SetLeft(ellipse, p.X - p.Radius / 2);
-                Canvas.SetTop(ellipse, p.Y - p.Radius / 2);
+                //MyCanvas.Children.Add(ellipse);
 
-                MyCanvas.Children.Add(ellipse);
+                var argb = (chromosome.Color.A << 24) | (chromosome.Color.R << 16) | (chromosome.Color.G << 8) | chromosome.Color.B;
 
-                chromosomes[i] = p;
+                matrix[chromosome.Y, chromosome.X] = System.Drawing.Color.FromArgb(argb);
+                //if (Utility.Generation % 10 == 0)
+                //{
+                //    var brush = new SolidBrush(System.Drawing.Color.FromArgb(argb));
+                //    //graphics.FillRectangle(brush, chromosome.X - chromosome.Radius - 2, chromosome.Y - chromosome.Radius - 2, chromosome.Radius, chromosome.Radius);
+                //    graphics.FillRectangle(brush, chromosome.X, chromosome.Y, chromosome.Radius, chromosome.Radius);
+                //}
             }
 
-            return chromosomes;
+            //var grayList = new List<System.Drawing.Color>();
+            //var grays = new HashSet<System.Drawing.Color>();
+            //if (Utility.Generation % 10 == 0)
+            //{
+            //    for (var y = 0; y < 256; y++)
+            //    {
+            //        for (var x = 0; x < 256; x++)
+            //        {
+            //            var gray = Individual.GetGrayColor(Individual.target[y, x]);
+
+            //            grayList.Add(gray);
+            //            grays.Add(gray);
+
+            //            var brush = new SolidBrush(gray);
+            //            //graphics.FillRectangle(brush, x, y, 1, 1);
+            //        }
+            //    }
+            //}
+
+            //b.Save(temp, System.Drawing.Imaging.ImageFormat.Png);
+            //Utility.Canvas.Tag = matrix;
+
+            if (Utility.Generation % 10 == 0)
+            {
+                //var stm = new MemoryStream();
+                //b.Save(stm, System.Drawing.Imaging.ImageFormat.Png);
+
+                //string tempFile = System.IO.Path.GetTempFileName() + ".pointillism.png";
+                //b.Save(tempFile, System.Drawing.Imaging.ImageFormat.Png);
+                //MyCanvas.Source = new BitmapImage(new Uri(tempFile));
+            }
+
+            return null;
+            //Process.Start(temp);
+        }
+
+        private void Original_MouseEnter(object sender, MouseEventArgs e)
+        {
+            ((System.Windows.Controls.Image)sender).Opacity = 0.01;
+        }
+
+        private void Original_MouseLeave(object sender, MouseEventArgs e)
+        {
+            ((System.Windows.Controls.Image)sender).Opacity = 1;
+        }
+    }
+
+    public static class GraphicsExtensions
+    {
+        public static void FillCircle(this System.Drawing.Graphics g, System.Drawing.Brush brush,
+                                      float centerX, float centerY, float radius)
+        {
+            g.FillEllipse(brush, centerX - radius, centerY - radius,
+                          radius + radius, radius + radius);
         }
     }
 }

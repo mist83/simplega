@@ -17,7 +17,19 @@ namespace Pointillism.Models
 
             for (var i = 0; i < size; i++)
             {
-                var individual = new Individual(1000, Enumerable.Repeat(1, 1000).Select(x => Chromosome.Random()).ToArray());
+                var chromosomeCount = 32 * 32;
+
+                var chromosomes = new List<Chromosome>();
+                for (int y = 0; y < Math.Sqrt(chromosomeCount); y++)
+                {
+                    for (int x = 0; x < Math.Sqrt(chromosomeCount); x++)
+                    {
+                        var c = new Chromosome(x, y, 32 / (int)Math.Sqrt(chromosomeCount));
+                        chromosomes.Add(c);
+                    }
+                }
+
+                var individual = new Individual(chromosomes.ToArray());
                 Individuals.Add(individual);
             }
         }
@@ -30,6 +42,8 @@ namespace Pointillism.Models
 
         public void Save()
         {
+            return;
+
             var generationDirectory = Path.Combine(Utility.SaveDirectory, $"Generation_{Utility.Generation:D6}");
             Directory.CreateDirectory(generationDirectory);
 
@@ -56,12 +70,42 @@ namespace Pointillism.Models
             return new Population(scored);
         }
 
+        List<int> indexes = null;
+
         public Population Breed()
         {
-            var ranked = Rank().Individuals.Take((int)(0.8 * size)).ToList(); // bottom % of population "die"
+            if (indexes == null)
+            {
+                indexes = new List<int>();
+                for (var i = 0; i < Individuals.Count; i++)
+                {
+                    for (var j = 0; j <= i; j++)
+                        indexes.Add(j);
+                }
 
-            var best = Math.Abs(ranked[0].Fitness);
-            var worst = Math.Abs(ranked[ranked.Count - 1].Fitness);
+                indexes.Sort();
+            }
+
+            var ranked = Rank().Individuals.ToList();
+
+
+
+            var bitmap = new System.Drawing.Bitmap(32, 32);
+            System.Drawing.Graphics graphics = System.Drawing.Graphics.FromImage(bitmap);
+            foreach (var chromosome in ranked.First().Chromosomes)
+            {
+                var argb = (chromosome.Color.A << 24) | (chromosome.Color.R << 16) | (chromosome.Color.G << 8) | chromosome.Color.B;
+
+                var brush = new System.Drawing.SolidBrush(System.Drawing.Color.FromArgb(argb));
+                graphics.FillRectangle(brush, chromosome.X, chromosome.Y, chromosome.Radius, chromosome.Radius);
+            }
+
+            var tmp = Path.GetTempFileName() + ".ga.png";
+            bitmap.Save(tmp, System.Drawing.Imaging.ImageFormat.Png);
+            Utility.Canvas.Source = new System.Windows.Media.Imaging.BitmapImage(new Uri(tmp));
+
+            var best = (int)Math.Abs(ranked[0].Fitness);
+            var worst = (int)Math.Abs(ranked[ranked.Count - 1].Fitness);
             var total = ranked.Sum(x => Math.Abs((long)x.Fitness));
             var average = ((long)ranked.Average(x => Math.Abs((long)x.Fitness)));
 
@@ -69,8 +113,12 @@ namespace Pointillism.Models
             var nextGeneration = new List<Individual>();
             while (nextGeneration.Count < Individuals.Count)
             {
-                var mom = ranked[Utility.Random.Next(ranked.Count)];
-                var pop = ranked[Utility.Random.Next(ranked.Count)];
+                var twoRandoms = new[] { indexes[Utility.Random.Next(indexes.Count)], indexes[Utility.Random.Next(indexes.Count)] };
+
+                var momIndex = (twoRandoms[0] * twoRandoms[0]) / ranked.Count;
+                var popIndex = (twoRandoms[1] * twoRandoms[1]) / ranked.Count;
+                var mom = ranked[momIndex];
+                var pop = ranked[popIndex];
 
                 var child = Individual.Breed(mom, pop);
                 nextGeneration.Add(child);

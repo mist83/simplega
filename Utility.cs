@@ -26,8 +26,12 @@ namespace Pointillism
 
         public static string SaveDirectory { get; }
 
-        public static Canvas Canvas { get; set; }
+        public static Image Canvas { get; set; }
+
+        public static string Original { get; set; }
 
         public static int Generation { get; set; }
+
+        public static System.Drawing.Bitmap Fittest { get; set; }
     }
 }
