@@ -1,17 +1,11 @@
-﻿using System;
-using System.Linq;
-using System.Collections.Generic;
-using System.Diagnostics;
+﻿using Pointillism.Models;
+using System;
+using System.Drawing;
 using System.IO;
 using System.Windows;
-using System.Windows.Controls;
 using System.Windows.Input;
-using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using System.Windows.Shapes;
 using System.Windows.Threading;
-using Pointillism.Models;
-using System.Drawing;
 
 namespace Pointillism
 {
@@ -27,8 +21,17 @@ namespace Pointillism
         {
             InitializeComponent();
 
-            Original.Source = new BitmapImage(new Uri(@"Z:\Users\Michael\Documents\Visual Studio 2015\Projects\Pointillism\Pointillism\images\TestImage.png"));
-            Utility.Canvas = MyCanvas;
+            var landscape = System.IO.Path.GetTempFileName() + ".png";
+            using (var stream = new FileStream(landscape, FileMode.Create))
+            {
+                typeof(MainWindow).Assembly.GetManifestResourceStream("Pointillism.images.Landscape.png").CopyTo(stream);
+            }
+
+            Original.Source = new BitmapImage(new Uri(landscape));
+            // Hack to get static constructor to fire
+            Console.WriteLine(new Individual(new Chromosome[] { }).ToString());
+
+            Target.Source = new BitmapImage(new Uri(Utility.Original));
 
             Loaded += MainWindow_Loaded;
             MouseDown += MainWindow_MouseDown;
@@ -52,14 +55,14 @@ namespace Pointillism
 
         private void DispatcherTimer_Tick(object sender, EventArgs e)
         {
-            Target.Source = new BitmapImage(new Uri(Utility.Original));
-
             RedrawFunction();
         }
 
+        DateTime start = DateTime.Now;
+
         private void RedrawFunction()
         {
-            Title = $"Generation {Utility.Generation}: Individual {currentIndividual}";
+            Title = $"Generation {Utility.Generation}: Determining fitness for individual {currentIndividual}";
 
             // time for the next generation
             if (currentIndividual >= population.Individuals.Count)
@@ -68,7 +71,17 @@ namespace Pointillism
 
                 // breed the next generation
                 currentIndividual = 0;
-                population = population.Breed();
+                var bred = population.Breed();
+                MyCanvas.Source = new BitmapImage(new Uri(population.FittestFile));
+                Best.Text = population.Best;
+                Worst.Text = population.Worst;
+                Total.Text = population.Total;
+                Average.Text = population.Average;
+                var time = DateTime.Now.Subtract(start);
+                Time.Text = string.Format("{0:00}:{1:00}:{2:00}", time.Hours, time.Minutes, time.Seconds);
+
+                population = bred;
+
                 Utility.Generation++;
                 return;
             }
@@ -89,7 +102,7 @@ namespace Pointillism
         }
 
         public static Bitmap RedrawToBitmap(Individual individual)
-        { 
+        {
             //if (graphics == null)
             //    graphics = Graphics.FromImage(b);
 

@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
-using System.Windows.Controls;
 
 namespace Pointillism
 {
@@ -25,8 +24,6 @@ namespace Pointillism
         public static Random Random { get; }
 
         public static string SaveDirectory { get; }
-
-        public static Image Canvas { get; set; }
 
         public static string Original { get; set; }
 

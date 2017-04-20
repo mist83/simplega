@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 
@@ -42,7 +43,8 @@ namespace Pointillism.Models
 
         public void Save()
         {
-            return;
+            if ("a"[0] == 'a')
+                return;
 
             var generationDirectory = Path.Combine(Utility.SaveDirectory, $"Generation_{Utility.Generation:D6}");
             Directory.CreateDirectory(generationDirectory);
@@ -61,6 +63,8 @@ namespace Pointillism.Models
                     lines.ForEach(x => writer.WriteLine(x));
                 }
             }
+
+            Process.Start(generationDirectory);
         }
 
         private Population Rank()
@@ -71,6 +75,13 @@ namespace Pointillism.Models
         }
 
         List<int> indexes = null;
+
+        public string FittestFile { get; set; }
+
+        public string Best { get; set; }
+        public string Worst{ get; set; }
+        public string Total { get; set; }
+        public string Average { get; set; }
 
         public Population Breed()
         {
@@ -100,16 +111,15 @@ namespace Pointillism.Models
                 graphics.FillRectangle(brush, chromosome.X, chromosome.Y, chromosome.Radius, chromosome.Radius);
             }
 
-            var tmp = Path.GetTempFileName() + ".ga.png";
-            bitmap.Save(tmp, System.Drawing.Imaging.ImageFormat.Png);
-            Utility.Canvas.Source = new System.Windows.Media.Imaging.BitmapImage(new Uri(tmp));
+            FittestFile = Path.GetTempFileName() + ".ga.png";
+            bitmap.Save(FittestFile, System.Drawing.Imaging.ImageFormat.Png);
 
-            var best = (int)Math.Abs(ranked[0].Fitness);
-            var worst = (int)Math.Abs(ranked[ranked.Count - 1].Fitness);
-            var total = ranked.Sum(x => Math.Abs((long)x.Fitness));
-            var average = ((long)ranked.Average(x => Math.Abs((long)x.Fitness)));
+            Best = ((int)Math.Abs(ranked[0].Fitness)).ToString("n0");
+            Worst = ((int)Math.Abs(ranked[ranked.Count - 1].Fitness)).ToString("n0");
+            Total = ranked.Sum(x => Math.Abs((long)x.Fitness)).ToString("n0");
+            Average = (((long)ranked.Average(x => Math.Abs((long)x.Fitness)))).ToString("n0");
 
-            Console.WriteLine($"{Utility.Generation.ToString().PadRight(6)}Best/Worst/Total/Average: {best.ToString().PadLeft(15)}{worst.ToString().PadLeft(15)}{total.ToString().PadLeft(15)}{average.ToString().PadLeft(15)}");
+            Console.WriteLine($"{Utility.Generation.ToString().PadRight(6)}Best/Worst/Total/Average: {Best.PadLeft(15)}{Worst.PadLeft(15)}{Total.PadLeft(15)}{Average.PadLeft(15)}");
             var nextGeneration = new List<Individual>();
             while (nextGeneration.Count < Individuals.Count)
             {

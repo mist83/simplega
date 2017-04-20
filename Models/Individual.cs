@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Linq;
@@ -8,26 +7,22 @@ namespace Pointillism.Models
 {
     public class Individual
     {
-        public List<Chromosome> Chromosomes { get; } = new List<Chromosome>();
+        public Chromosome[] Chromosomes { get; private set; }
 
         public static Color[,] target = new Color[32, 32];
 
         static Individual()
         {
-            Bitmap nb = new Bitmap(32,32);
+            Bitmap nb = new Bitmap(32, 32);
             var g = Graphics.FromImage(nb);
 
-            var comparison = new LockBitmap(new Bitmap(@"Z:\Users\Michael\Documents\Visual Studio 2015\Projects\Pointillism\Pointillism\images\TestImage.png"));
-            comparison.LockBits();
-            //for (var y = 0; y < comparison.Height; y++)
-            //{
-            //    for (var x = 0; x < comparison.Width; x++)
-            //    {
-            //        var pixel = comparison.GetPixel(x, y);
-            //        target[y, x] = pixel;
-            //    }
-            //}
+            var landscape = System.IO.Path.GetTempFileName() + ".png";
+            using (var stream = new FileStream(landscape, FileMode.Create))
+            {
+                typeof(MainWindow).Assembly.GetManifestResourceStream("Pointillism.images.Landscape.png").CopyTo(stream);
+            }
 
+            var comparison = new Bitmap(landscape);
             for (int y = 0; y < 32; y++)
             {
                 for (int x = 0; x < 32; x++)
@@ -57,7 +52,7 @@ namespace Pointillism.Models
 
         public Individual(Chromosome[] chromosomes)
         {
-            Chromosomes.AddRange(chromosomes);
+            Chromosomes=chromosomes;
         }
 
         public double Fitness { get; private set; }
@@ -66,18 +61,14 @@ namespace Pointillism.Models
 
         public static Individual Breed(Individual mom, Individual pop)
         {
-            var child = new Individual(Enumerable.Repeat(default(Chromosome), mom.Chromosomes.Count).ToArray());
+            var child = new Individual(Enumerable.Repeat(default(Chromosome), mom.Chromosomes.Length).ToArray());
 
-            //var mutations = Enumerable.Repeat(1, mom.Chromosomes.Count).Select(x => Utility.Random.Next(10000) < 15).ToArray();
-            var mutations = Enumerable.Repeat(1, mom.Chromosomes.Count).Select(x => Utility.Random.Next(1000) < 7).ToArray();
-            var trues = mutations.Count(x => x);
-            for (var i = 0; i < mom.Chromosomes.Count; i++)
+            // mom and dad have same # of chromosomes, I could have just as easily used dad.Chromosomes.Count
+            for (var i = 0; i < mom.Chromosomes.Length; i++)
             {
-                // 10% of chromosomes get mutated
-                if (mutations[i])
+                // 0.2% of chromosomes get mutated (random chromosome)
+                if (Utility.Random.Next(1000) < 2)
                 {
-                    //child.Chromosomes[i] = mom.Chromosomes[i];
-                    //child.Chromosomes[i].Color = new Chromosome(-1, -1, -1).Color;
                     child.Chromosomes[i] = new Chromosome(mom.Chromosomes[i].X, mom.Chromosomes[i].Y, 1);
                     continue;
                 }
@@ -92,26 +83,6 @@ namespace Pointillism.Models
 
         public void Score()
         {
-            //int[,,] health = new int[256, 256, 3];
-
-            //var stream = (MemoryStream)Utility.Canvas.Tag;
-            //var b = new Bitmap(stream);
-
-            //var fitness = 0.0;
-
-            //var lb = new LockBitmap(b);
-            //lb.LockBits();
-            //for (var y = 0; y < b.Height; y++)
-            //{
-            //    for (var x = 0; x < b.Width; x++)
-            //    {
-            //        var pixel = lb.GetPixel(x, y);
-
-            //        var dist = ColorDistanceGray(target[y, x], pixel);
-            //        fitness += Math.Pow(dist, 2); // bigger differences have more weight
-            //    }
-            //}
-
             var fitness = 0.0;
 
             for (var y = 0; y <= GrayScales.GetUpperBound(0); y++)
@@ -121,23 +92,18 @@ namespace Pointillism.Models
                     var pixel = GrayScales[y, x];
 
                     var dist = ColorDistanceGray(target[y, x], pixel);
-                    if(dist < 0)
-                    {
 
-                    }else
-                    {
-
-                    }
-                    fitness += Math.Pow(dist, 2); // bigger differences have more weight
+                    // square it so that bigger differences have more weight, positive diff and negative diff are treated the same
+                    fitness += Math.Pow(dist, 2);
                 }
             }
 
             Fitness = fitness;
         }
 
-        private static Dictionary<string, double> cache = new Dictionary<string, double>();
+        #region Convert a color to grayscale
 
-        public static Color GetGrayColor(Color c)
+        private static Color GetGrayColor(Color c)
         {
             int gray = (int)(.2989 * c.R + .5870 * c.G + .1140 * c.B);
             return Color.FromArgb(c.A, gray, gray, gray);
@@ -151,15 +117,7 @@ namespace Pointillism.Models
             return gc1.R - gc2.R;
         }
 
-        double ColourDistance(Color e1, Color e2)
-        {
-            long rmean = (e1.R + e2.R) / 2;
-            long r = e1.R - e2.R;
-            long g = e1.G - e2.G;
-            long b = e1.B - e2.B;
-
-            return Math.Sqrt((((512 + rmean) * r * r) >> 8) + 4 * g * g + (((767 - rmean) * b * b) >> 8));
-        }
+        #endregion
 
         public override string ToString()
         {
